@@ -46,6 +46,7 @@ export class SceneManager {
     this.selectionManager = new SelectionManager();
     this.highlightMesh = null;
     this.abortController = new AbortController();
+    this.initialBox = null;
 
     this.onPointerDown = (e) => this.selectionManager.handlePointerDown(e);
     this.onPointerUp = (e) =>
@@ -77,6 +78,7 @@ export class SceneManager {
       this.parts = result.parts;
       this.buffers = result.buffers;
       this.meshes = result.mergedMeshes;
+      this.initialBox = result.boundingBox;
 
       this.meshes.forEach((mesh) => this.scene.add(mesh));
       this.layerManager = new LayerManager(this.meshes);
@@ -98,6 +100,8 @@ export class SceneManager {
 
   highlightPart(part) {
     this.clearHighlight();
+    if (!part) return;
+    
     const buffer = this.buffers[part.chunk];
     if (!buffer) return;
 
@@ -109,18 +113,24 @@ export class SceneManager {
       return;
     }
 
+    // Phase 2 Highlight: Glowing Cyan Wireframe
     const mat = new THREE.MeshBasicMaterial({
       color: 0x00e5ff,
+      wireframe: true,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.8,
       depthTest: false,
       depthWrite: false,
-      side: THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.renderOrder = 999;
     this.scene.add(mesh);
     this.highlightMesh = mesh;
+
+    // Phase 2: Cinematic Focus
+    if (geo.boundingBox) {
+      this.cameraController.focusOn(geo.boundingBox);
+    }
   }
 
   clearHighlight() {
@@ -133,11 +143,16 @@ export class SceneManager {
 
   resetSelection() {
     this.clearHighlight();
+    this.cameraController.resetView();
     this.callbacks.onSelect?.(null);
   }
 
   setLayerVisible(system, visible) {
     this.layerManager?.setVisible(system, visible);
+  }
+
+  setIsolationMode(isolated, system) {
+    this.layerManager?.setMode(isolated, system);
   }
 
   animate() {
@@ -148,9 +163,10 @@ export class SceneManager {
     this.cameraController.update();
     this.layerManager?.update(dt);
 
+    // Pulse effect on highlight
     if (this.highlightMesh) {
-      const t = performance.now() * 0.003;
-      this.highlightMesh.material.opacity = 0.28 + Math.sin(t) * 0.08;
+      const t = performance.now() * 0.004;
+      this.highlightMesh.material.opacity = 0.4 + Math.sin(t) * 0.3;
     }
 
     this.renderer.render(this.scene, this.camera);
