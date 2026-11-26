@@ -1,6 +1,6 @@
 import { SYSTEM_DESCRIPTIONS, SYSTEM_LABELS } from '../data/anatomyData';
 
-export default function InspectionPanel({ part, onReset }) {
+export default function InspectionPanel({ part, onReset, onIsolate, isIsolated }) {
   if (!part) {
     return (
       <aside className="inspection-panel empty">
@@ -11,8 +11,7 @@ export default function InspectionPanel({ part, onReset }) {
   }
 
   const system = part.system;
-  const description =
-    SYSTEM_DESCRIPTIONS[system] || 'No description available.';
+  const description = SYSTEM_DESCRIPTIONS[system] || 'No description available.';
 
   return (
     <aside className="inspection-panel">
@@ -23,9 +22,18 @@ export default function InspectionPanel({ part, onReset }) {
       <div className="part-meta">
         <span>FMA {part.conceptId}</span>
       </div>
-      <button className="reset-btn" onClick={onReset}>
-        Reset selection
-      </button>
+      
+      <div className="panel-actions">
+        <button 
+          className={`action-btn ${isIsolated ? 'active' : ''}`} 
+          onClick={onIsolate}
+        >
+          {isIsolated ? 'Show All Systems' : 'Isolate System'}
+        </button>
+        <button className="action-btn reset" onClick={onReset}>
+          Reset View
+        </button>
+      </div>
     </aside>
   );
 }
