@@ -19,13 +19,13 @@ export default function App() {
   const [layers, setLayers] = useState(
     Object.fromEntries(ALL_SYSTEMS.map((s) => [s, true]))
   );
+  
+  // Mobile UI state
+  const [uiOpen, setUiOpen] = useState(false);
+  const [isIsolated, setIsIsolated] = useState(false);
 
-  const handleReady = useCallback(() => {
-    setLoading(false);
-  }, []);
-
+  const handleReady = useCallback(() => setLoading(false), []);
   const handleProgress = useCallback((p) => setProgress(p), []);
-
   const handleError = useCallback((msg) => {
     setError(msg);
     setLoading(false);
@@ -37,6 +37,7 @@ export default function App() {
 
   const handleReset = useCallback(() => {
     setSelectedPart(null);
+    setIsIsolated(false);
     engine?.resetSelection();
   }, [engine]);
 
@@ -63,15 +64,28 @@ export default function App() {
   const handleNavigate = useCallback(
     (id) => {
       setActiveNav(id);
+      setIsIsolated(false);
+      engine?.resetSelection();
+      setSelectedPart(null);
       const preset = NAV_PRESETS[id];
       if (preset) applyPreset(preset());
     },
-    [applyPreset]
+    [applyPreset, engine]
   );
 
+  const toggleIsolate = useCallback(() => {
+    const next = !isIsolated;
+    setIsIsolated(next);
+    engine?.setIsolationMode(next, selectedPart?.system);
+  }, [engine, isIsolated, selectedPart]);
+
   return (
-    <div className="app">
-      <TopNav />
+    <div className={`app ${uiOpen ? 'ui-open' : ''}`}>
+      <TopNav 
+        onToggleMenu={() => setUiOpen(!uiOpen)} 
+        uiOpen={uiOpen} 
+      />
+      
       <div className="main">
         <Viewport
           onReady={handleReady}
@@ -81,13 +95,24 @@ export default function App() {
           onEngineReady={setEngine}
         />
 
-        <AnatomicalNav active={activeNav} onNavigate={handleNavigate} />
+        <div className="ui-panels">
+          <AnatomicalNav active={activeNav} onNavigate={handleNavigate} />
+          <LayerControls layers={layers} onToggle={handleLayerToggle} />
+        </div>
 
-        <LayerControls layers={layers} onToggle={handleLayerToggle} />
+        <InspectionPanel 
+          part={selectedPart} 
+          onReset={handleReset} 
+          onIsolate={toggleIsolate}
+          isIsolated={isIsolated}
+        />
 
-        <InspectionPanel part={selectedPart} onReset={handleReset} />
-
-        <MobileBottomSheet part={selectedPart} onReset={handleReset} />
+        <MobileBottomSheet 
+          part={selectedPart} 
+          onReset={handleReset} 
+          onIsolate={toggleIsolate}
+          isIsolated={isIsolated}
+        />
       </div>
 
       {loading && <LoadingOverlay progress={progress} />}
